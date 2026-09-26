@@ -1,6 +1,8 @@
 #pragma once
 
 #include <functional>
+#include <variant>
+#include <utility>
 #include <string>
 #include <vector>
 #include <queue>
@@ -12,38 +14,38 @@ class Pipeline
 private:
     std::vector<std::function<std::string(T*)>> nodes;
     std::map<std::string, size_t> nodeIds;
+    std::vector<std::string> nodeNames;
+
     std::vector<size_t> inDegrees;
-    std::vector<stze_t>outDegrees;
+    std::vector<size_t> outDegrees;
     std::vector<size_t> remainInDegrees;
-    std::vector<std::vector<size_t>> adj;
+
+    std::vector<std::vector<size_t>> adjacent;
+
+    std::queue<std::pair<size_t, size_t>> printQueue;
     std::queue<size_t> tasks;
 
     size_t concurrenting;
-    bool initedAdj;
+    bool initializedAdjacent;
     
-    std::string dummy (T* state)
+    static std::string dummy (T* state)
     {
         return "";
     }
 
     void init ()
     {
-        nodeIds["End"] = 0;
-        nodes.push_back(dummy);
-        nodeIds["Start"] = 1;
-        nodes.push_back(dummy);
-        inDegrees.resize(2);
-        outDegrees.resize(2);
-        initedAdj = false;
+        addNode(END, dummy);
+        addNode(START, dummy);
     }
 
 public:
     T* state;
 
-    const std::string START = "Start";
-    const std::string END = "End";
+    static constexpr std::string START = "Start";
+    static constexpr std::string END = "End";
 
-    Pipeline ()
+    Pipeline () : state(nullptr)
     {
         init();
     }
@@ -56,26 +58,54 @@ public:
     void addNode (std::string name, std::function<std::string(T*)> callable)
     {
         nodeIds[name] = nodes.size();
+        nodeNames.push_back(name);
         nodes.push_back(callable);
         inDegrees.push_back(0);
         outDegrees.push_back(0);
         remainInDegrees.push_back(0);
-        initedAdj = false;
+        initializedAdjacent = false;
     }
 
     void addEdge (std::string origin, std::string destination)
     {
-        if (!initedAdj)
-            adj = std::vector<std::vector<size_t>> (nodes.size());
+        if (!initializedAdjacent)
+        {
+            adjacent = std::vector<std::vector<size_t>> (nodes.size());
+            initializedAdjacent = true;
+        }
 
-        size_t originId = nodeIds[origin], destinationId = nodeIds[destination]
-        adj[originId].push_back(destinationId);
+        size_t originId = nodeIds[origin], destinationId = nodeIds[destination];
+        adjacent[originId].push_back(destinationId);
         ++inDegrees[destinationId];
+        ++outDegrees[originId];
         ++remainInDegrees[destinationId];
     }
 
     void exec ()
     {
         tasks.push(nodeIds[START]);
+    }
+
+    void print ()
+    {
+        printQueue.emplace(-1, nodeIds[START]);
+
+        while (!printQueue.empty())
+        {
+            auto [parent, node] = printQueue.front();
+            printQueue.pop();
+            remainInDegrees[node] = inDegrees[node];
+
+            if (parent != -1) std::cout << nodeNames[parent] << " -> " << nodeNames[node] << '\n';
+
+            for (size_t nextNode : adjacent[node])
+            {
+                --remainInDegrees[nextNode];
+                if (!remainInDegrees[nextNode])
+                {
+                    printQueue.emplace(node, nextNode);
+                }
+            }
+        }
     }
 };
