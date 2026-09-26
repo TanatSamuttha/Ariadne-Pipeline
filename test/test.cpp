@@ -2,11 +2,11 @@
 
 #include "pipeline.hpp"
 
-Pipeline<std::monostate> pipeline;
+Ariadne::Pipeline<Ariadne::NoState> pipeline;
 
 void Test1 ()
 {
-    std::function<std::string(std::shared_ptr<std::monostate>)> dummy = [](std::shared_ptr<std::monostate>) -> std::string
+    std::function<std::string(std::shared_ptr<Ariadne::NoState>)> dummy = [](std::shared_ptr<Ariadne::NoState>) -> std::string
     {
         return "";
     };
