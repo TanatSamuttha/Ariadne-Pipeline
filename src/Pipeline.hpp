@@ -1,10 +1,14 @@
 #pragma once
 
+#include <condition_variable>
 #include <functional>
+#include <iostream>
 #include <utility>
+#include <thread>
 #include <memory>
 #include <string>
 #include <vector>
+#include <mutex>
 #include <queue>
 #include <map>
 
@@ -21,26 +25,86 @@ namespace Ariadne
         std::vector<std::string> nodeNames;
 
         std::vector<size_t> inDegrees;
-        std::vector<size_t> outDegrees;
         std::vector<size_t> remainInDegrees;
 
         std::vector<std::vector<size_t>> adjacent;
 
         std::queue<std::pair<size_t, size_t>> printQueue;
         std::queue<size_t> tasks;
+        std::mutex tasksLock;
+        std::condition_variable taskCV;
+        bool working;
 
-        size_t concurrenting;
         bool initializedAdjacent;
         
-        static std::string dummy (std::shared_ptr<T> state)
+        std::string start (std::shared_ptr<T> state)
         {
+            return "";
+        }
+
+        std::string end (std::shared_ptr<T> state)
+        {
+            std::lock_guard lock(tasksLock);
+            working = false;
+            taskCV.notify_all();
             return "";
         }
 
         void init ()
         {
-            addNode(END, dummy);
-            addNode(START, dummy);
+            addNode(END, std::bind(&Pipeline::end, this, std::placeholders::_1));
+            addNode(START, std::bind(&Pipeline::start, this, std::placeholders::_1));
+        }
+
+        void worker ()
+        {
+            while (true)
+            {
+                std::unique_lock<std::mutex> lock(tasksLock);
+                taskCV.wait(lock, [&]()
+                {
+                    return !tasks.empty() || !working;
+                });
+
+                if (!working)
+                    return;
+
+                size_t nodeId;
+                nodeId = tasks.front();
+                tasks.pop();
+                
+                lock.unlock();
+
+                std::string next = nodes[nodeId](state);
+                
+                if (!working)
+                    return;
+
+                if (next == "")
+                {
+                    std::lock_guard lock(tasksLock);
+                    for (size_t nextId : adjacent[nodeId])
+                    {
+                        pushTask(nextId);
+                    }
+                }
+                else
+                {
+                    size_t nextId = nodeIds[next];
+                    std::lock_guard lock(tasksLock);
+                    pushTask(nextId);
+                }
+                taskCV.notify_all();
+            }
+        }
+
+        void pushTask (size_t nextId)
+        {
+            --remainInDegrees[nextId];
+            if (!remainInDegrees[nextId])
+            {
+                tasks.push(nextId);
+            }
         }
 
     public:
@@ -65,7 +129,6 @@ namespace Ariadne
             nodeNames.push_back(name);
             nodes.push_back(callable);
             inDegrees.push_back(0);
-            outDegrees.push_back(0);
             remainInDegrees.push_back(0);
             initializedAdjacent = false;
         }
@@ -81,13 +144,25 @@ namespace Ariadne
             size_t originId = nodeIds[origin], destinationId = nodeIds[destination];
             adjacent[originId].push_back(destinationId);
             ++inDegrees[destinationId];
-            ++outDegrees[originId];
             ++remainInDegrees[destinationId];
         }
 
-        void exec ()
+        void exec (size_t workers)
         {
+            working = true;
             tasks.push(nodeIds[START]);
+
+            std::vector<std::thread> threads;
+
+            for (size_t i = 0; i < workers; ++i)
+            {
+                threads.emplace_back(&Pipeline::worker, this);
+            }
+
+            for (auto& thread : threads)
+            {
+                thread.join();
+            }
         }
 
         void print ()
@@ -111,11 +186,6 @@ namespace Ariadne
                     }
                 }
             }
-        }
-
-        class WorkerPool
-        {
-        
         }
     };
 }
