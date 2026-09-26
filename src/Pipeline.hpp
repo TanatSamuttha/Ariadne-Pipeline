@@ -9,20 +9,26 @@ template<typename T>
 class Pipeline
 {
 private:
-    std::vector<std::function<string(T*)>> node;
-    std::map<std::string, size_t> nodeId;
+    std::vector<std::function<std::string(T*)>> nodes;
+    std::map<std::string, size_t> nodeIds;
+    std::vector<size_t> degrees;
+    std::vector<std::vector<size_t>> adj;
+
+    bool initedAdj;
     
-    string dummy (T* state)
+    std::string dummy (T* state)
     {
         return "";
     }
 
     void init ()
     {
-        nodeId["End"] = 0;
-        node.push_back(dummy);
-        nodeId["Start"] = 1;
-        node.push_back(dummy);
+        nodeIds["End"] = 0;
+        nodes.push_back(dummy);
+        nodeIds["Start"] = 1;
+        nodes.push_back(dummy);
+        degrees.resize(2);
+        initedAdj = false;
     }
 
 public:
@@ -38,9 +44,21 @@ public:
         init();
     }
 
-    void addNode (std::string name, std::function<string(T*)> callable)
+    void addNode (std::string name, std::function<std::string(T*)> callable)
     {
-        nodeId[name] = node.size();
-        node.push_back(callable);
+        nodeIds[name] = nodes.size();
+        nodes.push_back(callable);
+        degrees.push_back(0);
+        initedAdj = false;
+    }
+
+    void addEdge (std::string origin, std::string destination)
+    {
+        if (!initedAdj)
+            adj = std::vector<std::vector<size_t>> (nodes.size());
+
+        size_t originId = nodeIds[origin], destinationId = nodeIds[destination]
+        adj[originId].push_back(destinationId);
+        ++degrees[destinationId];
     }
 };
