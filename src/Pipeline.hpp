@@ -86,6 +86,7 @@ namespace Ariadne
                     for (size_t nextId : adjacent[nodeId])
                     {
                         pushTask(nextId);
+                        taskCV.notify_one();
                     }
                 }
                 else
@@ -93,8 +94,9 @@ namespace Ariadne
                     size_t nextId = nodeIds[next];
                     std::lock_guard lock(tasksLock);
                     pushTask(nextId);
+                    taskCV.notify_one();
                 }
-                taskCV.notify_all();
+                
             }
         }
 
