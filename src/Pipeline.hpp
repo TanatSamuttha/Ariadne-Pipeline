@@ -3,6 +3,7 @@
 #include <functional>
 #include <variant>
 #include <utility>
+#include <memory>
 #include <string>
 #include <vector>
 #include <queue>
@@ -12,7 +13,7 @@ template<typename T>
 class Pipeline
 {
 private:
-    std::vector<std::function<std::string(T*)>> nodes;
+    std::vector<std::function<std::string(std::shared_ptr<T>)>> nodes;
     std::map<std::string, size_t> nodeIds;
     std::vector<std::string> nodeNames;
 
@@ -28,7 +29,7 @@ private:
     size_t concurrenting;
     bool initializedAdjacent;
     
-    static std::string dummy (T* state)
+    static std::string dummy (std::shared_ptr<T> state)
     {
         return "";
     }
@@ -40,7 +41,7 @@ private:
     }
 
 public:
-    T* state;
+    std::shared_ptr<T> state;
 
     static constexpr std::string START = "Start";
     static constexpr std::string END = "End";
@@ -50,12 +51,12 @@ public:
         init();
     }
 
-    Pipeline (T* state) : state(state)
+    Pipeline (std::shared_ptr<T> state) : state(state)
     {
         init();
     }
 
-    void addNode (std::string name, std::function<std::string(T*)> callable)
+    void addNode (std::string name, std::function<std::string(std::shared_ptr<T>)> callable)
     {
         nodeIds[name] = nodes.size();
         nodeNames.push_back(name);

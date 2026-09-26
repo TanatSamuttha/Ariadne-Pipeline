@@ -6,7 +6,7 @@ Pipeline<std::monostate> pipeline;
 
 void Test1 ()
 {
-    std::function<std::string(std::monostate*)> dummy = [](std::monostate*) -> std::string
+    std::function<std::string(std::shared_ptr<std::monostate>)> dummy = [](std::shared_ptr<std::monostate>) -> std::string
     {
         return "";
     };
