@@ -17,11 +17,13 @@ void Test1 ()
     pipeline.addNode("Task3", dummy);
     pipeline.addNode("Task4", dummy);
 
+    
     pipeline.addEdge(pipeline.START, "Task1");
     pipeline.addEdge("Task1", "Task2");
     pipeline.addEdge("Task2", "Task3");
     pipeline.addEdge("Task2", "Task4");
     pipeline.addEdge("Task4", pipeline.END);
+    std::cout << "Edge\n";
 
     pipeline.print();
 }

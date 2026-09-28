@@ -20,6 +20,34 @@ namespace Ariadne
     class Pipeline
     {
     private:
+        struct Incedent
+        {
+            size_t nodeId;
+            bool edgeType; // 1 = cycle
+
+            Incedent () = default;
+            Incedent (size_t nodeId, bool edgeType) : nodeId(nodeId), edgeType(edgeType) {}
+        };
+
+        struct Task
+        {
+            size_t nodeId;
+            bool active;
+            
+            Task () = default;
+            Task (size_t nodeId, bool active) : nodeId(nodeId), active(active) {}
+        };
+        
+        struct Printable
+        {
+            size_t nodeId;
+            size_t parentId;
+            bool edgeType;
+            
+            Printable () = default;
+            Printable (size_t nodeId, size_t parentId, bool edgeType) : nodeId(nodeId), parentId(parentId), edgeType(edgeType) {}
+        };
+
         std::vector<std::function<std::string(std::shared_ptr<T>)>> nodes;
         std::map<std::string, size_t> nodeIds;
         std::vector<std::string> nodeNames;
@@ -27,10 +55,10 @@ namespace Ariadne
         std::vector<size_t> inDegrees;
         std::vector<size_t> remainInDegrees;
 
-        std::vector<std::vector<size_t>> adjacent;
+        std::vector<std::vector<Incedent>> adjacent;
 
-        std::queue<std::pair<size_t, size_t>> printQueue;
-        std::queue<size_t> tasks;
+        std::queue<Printable>printQueue;
+        std::queue<Task> tasks;
         std::mutex tasksLock;
         std::condition_variable taskCV;
         bool working;
@@ -60,8 +88,8 @@ namespace Ariadne
         {
             while (true)
             {
-                std::unique_lock<std::mutex> lock(tasksLock);
-                taskCV.wait(lock, [&]()
+                std::unique_lock<std::mutex> uLock(tasksLock);
+                taskCV.wait(uLock, [&]()
                 {
                     return !tasks.empty() || !working;
                 });
@@ -69,43 +97,54 @@ namespace Ariadne
                 if (!working)
                     return;
 
-                size_t nodeId;
-                nodeId = tasks.front();
+                Task task = tasks.front();
                 tasks.pop();
                 
-                lock.unlock();
+                uLock.unlock();
 
-                std::string next = nodes[nodeId](state);
+                std::string next = "";
+                if(task.active) next = nodes[task.nodeId](state);
                 
                 if (!working)
                     return;
 
-                if (next == "")
+                size_t nextId = nodeIds[next];
+                std::lock_guard gLock(tasksLock);
+                for (Incedent nextTask : adjacent[task.nodeId])
                 {
-                    std::lock_guard lock(tasksLock);
-                    for (size_t nextId : adjacent[nodeId])
-                    {
-                        pushTask(nextId);
-                        taskCV.notify_one();
-                    }
-                }
-                else
-                {
-                    size_t nextId = nodeIds[next];
-                    std::lock_guard lock(tasksLock);
-                    pushTask(nextId);
+                    if (next != "" && nextId == nextTask.nodeId) pushTask(nextTask.nodeId, true, nextTask.edgeType);
+                    else pushTask(nextTask.nodeId, task.active, nextTask.edgeType);
                     taskCV.notify_one();
                 }
-                
+                remainInDegrees[task.nodeId] = inDegrees[task.nodeId];
             }
         }
 
-        void pushTask (size_t nextId)
+        void pushTask (size_t nextId, bool active, bool edgeType)
         {
-            --remainInDegrees[nextId];
-            if (!remainInDegrees[nextId])
+            if (edgeType) tasks.emplace(nextId, active);
+            else
             {
-                tasks.push(nextId);
+                --remainInDegrees[nextId];
+                if (!remainInDegrees[nextId]) tasks.emplace(nextId, active);
+            }
+            
+        }
+
+        void generalAddEdge (std::string origin, std::string destination, bool edgeType)
+        {
+            if (!initializedAdjacent)
+            {
+                adjacent = std::vector<std::vector<Incedent>> (nodes.size());
+                initializedAdjacent = true;
+            }
+
+            size_t originId = nodeIds[origin], destinationId = nodeIds[destination];
+            adjacent[originId].emplace_back(destinationId, edgeType);
+            if (!edgeType)
+            {
+                ++inDegrees[destinationId];
+                ++remainInDegrees[destinationId];
             }
         }
 
@@ -137,22 +176,18 @@ namespace Ariadne
 
         void addEdge (std::string origin, std::string destination)
         {
-            if (!initializedAdjacent)
-            {
-                adjacent = std::vector<std::vector<size_t>> (nodes.size());
-                initializedAdjacent = true;
-            }
+            generalAddEdge(origin, destination, false);
+        }
 
-            size_t originId = nodeIds[origin], destinationId = nodeIds[destination];
-            adjacent[originId].push_back(destinationId);
-            ++inDegrees[destinationId];
-            ++remainInDegrees[destinationId];
+        void addCycleEdge (std::string origin, std::string destination)
+        {
+            generalAddEdge(origin, destination, true);
         }
 
         void exec (size_t workers)
         {
             working = true;
-            tasks.push(nodeIds[START]);
+            pushTask(nodeIds[START], true, true);
 
             std::vector<std::thread> threads;
 
@@ -169,22 +204,27 @@ namespace Ariadne
 
         void print ()
         {
-            printQueue.emplace(-1, nodeIds[START]);
+            printQueue.emplace(nodeIds[START], -1, false);
 
             while (!printQueue.empty())
             {
-                auto [parent, node] = printQueue.front();
+                Printable node = printQueue.front();
                 printQueue.pop();
-                remainInDegrees[node] = inDegrees[node];
+                remainInDegrees[node.nodeId] = inDegrees[node.nodeId];
 
-                if (parent != -1) std::cout << nodeNames[parent] << " -> " << nodeNames[node] << '\n';
+                if (node.parentId != -1) std::cout << nodeNames[node.parentId] << " -> " << nodeNames[node.nodeId] << '\n';
 
-                for (size_t nextNode : adjacent[node])
+                for (Incedent nextNode : adjacent[node.nodeId])
                 {
-                    --remainInDegrees[nextNode];
-                    if (!remainInDegrees[nextNode])
+                    if (nextNode.edgeType)
                     {
-                        printQueue.emplace(node, nextNode);
+                        std::cout << nodeNames[node.nodeId] << " C^ " << nodeNames[nextNode.nodeId] << '\n';
+                        continue;
+                    }
+                    --remainInDegrees[nextNode.nodeId];
+                    if (!remainInDegrees[nextNode.nodeId])
+                    {
+                        printQueue.emplace(nextNode.nodeId, node.nodeId, nextNode.edgeType);
                     }
                 }
             }
