@@ -1,6 +1,7 @@
 #include "pipeline.hpp"
 
-std::string foo1 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo1 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -9,7 +10,8 @@ std::string foo1 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo2 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo2 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -18,7 +20,8 @@ std::string foo2 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo3 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo3 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -27,7 +30,8 @@ std::string foo3 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo4 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo4 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -36,7 +40,8 @@ std::string foo4 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo5 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo5 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -45,7 +50,8 @@ std::string foo5 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo6 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo6 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -54,7 +60,8 @@ std::string foo6 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo7 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo7 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -63,7 +70,8 @@ std::string foo7 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo8 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo8 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {
@@ -72,7 +80,8 @@ std::string foo8 (std::shared_ptr<Ariadne::NoState>)
     return "";
 }
 
-std::string foo9 (std::shared_ptr<Ariadne::NoState>)
+template<typename T>
+std::string foo9 (std::shared_ptr<T> state)
 {
     for (int i = 1; i < 7; ++i)
     {

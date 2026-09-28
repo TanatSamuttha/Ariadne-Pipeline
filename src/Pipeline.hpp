@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <algorithm>
 #include <iostream>
 #include <utility>
 #include <thread>
@@ -27,6 +28,16 @@ namespace Ariadne
 
             Incedent () = default;
             Incedent (size_t nodeId, bool edgeType) : nodeId(nodeId), edgeType(edgeType) {}
+
+            bool operator== (const Incedent rhs) const
+            {
+                return nodeId == rhs.nodeId;
+            }
+
+            bool operator< (const Incedent rhs) const
+            {
+                return nodeId < rhs.nodeId;
+            }
         };
 
         struct Task
@@ -110,12 +121,35 @@ namespace Ariadne
 
                 size_t nextId = nodeIds[next];
                 std::lock_guard gLock(tasksLock);
-                for (Incedent nextTask : adjacent[task.nodeId])
+                
+                if (next != "")
                 {
-                    if (next != "" && nextId == nextTask.nodeId) pushTask(nextTask.nodeId, true, nextTask.edgeType);
-                    else pushTask(nextTask.nodeId, task.active, nextTask.edgeType);
-                    taskCV.notify_one();
+                    typename std::vector<Incedent>::iterator it;
+                    if (adjacent[task.nodeId].size() < 100)
+                        it = std::find(adjacent[task.nodeId].begin(), adjacent[task.nodeId].end(), Incedent(nextId, false));
+                    else
+                        it = std::lower_bound(adjacent[task.nodeId].begin(), adjacent[task.nodeId].end(), Incedent(nextId, false));
+                    if (it->edgeType)
+                    {
+                        pushTask(it->nodeId, true, true);
+                        taskCV.notify_one();
+                    }
+                    else
+                    {
+                        for (Incedent nextTask : adjacent[task.nodeId])
+                        {
+                            if (!nextTask.edgeType) pushTask(nextTask.nodeId, !(nextTask.nodeId ^ nextId), false);
+                        }
+                    }
                 }
+                else
+                {
+                    for (Incedent nextTask : adjacent[task.nodeId])
+                    {
+                        if (!nextTask.edgeType) pushTask(nextTask.nodeId, true, false);
+                    }
+                }
+                    
                 remainInDegrees[task.nodeId] = inDegrees[task.nodeId];
             }
         }
@@ -212,8 +246,6 @@ namespace Ariadne
                 printQueue.pop();
                 remainInDegrees[node.nodeId] = inDegrees[node.nodeId];
 
-                if (node.parentId != -1) std::cout << nodeNames[node.parentId] << " -> " << nodeNames[node.nodeId] << '\n';
-
                 for (Incedent nextNode : adjacent[node.nodeId])
                 {
                     if (nextNode.edgeType)
@@ -221,6 +253,7 @@ namespace Ariadne
                         std::cout << nodeNames[node.nodeId] << " C^ " << nodeNames[nextNode.nodeId] << '\n';
                         continue;
                     }
+                    else std::cout << nodeNames[node.nodeId] << " -> " << nodeNames[nextNode.nodeId] << '\n';
                     --remainInDegrees[nextNode.nodeId];
                     if (!remainInDegrees[nextNode.nodeId])
                     {
