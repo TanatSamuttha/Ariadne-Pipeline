@@ -204,6 +204,17 @@ namespace Ariadne
             init();
         }
 
+        Pipeline (const Pipeline& other)
+        {
+            nodes = other.nodes;
+            nodeIds = other.nodeIds;
+            nodeNames = other.nodeNames;
+            inDegrees = other.inDegrees;
+            remainInDegrees = other.inDegrees;
+            adjacent = other.adjacent;
+            initializedAdjacent = true;
+        }
+
         Pipeline& operator= (const Pipeline& other)
         {
             nodes = other.nodes;
@@ -213,6 +224,8 @@ namespace Ariadne
             remainInDegrees = other.inDegrees;
             adjacent = other.adjacent;
             initializedAdjacent = true;
+
+            return *this;
         }
 
         void addNode (std::string name, std::function<std::string(std::shared_ptr<T>)> callable)
