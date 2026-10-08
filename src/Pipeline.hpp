@@ -2,6 +2,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <stdexcept>
 #include <algorithm>
 #include <iostream>
 #include <utility>
@@ -68,11 +69,17 @@ namespace Ariadne
 
         std::vector<std::vector<Incedent>> adjacent;
 
-        std::queue<Printable>printQueue;
+        std::vector<std::thread> threads;
+
+        std::queue<Printable> printQueue;
         std::queue<Task> tasks;
         std::mutex tasksLock;
         std::condition_variable taskCV;
         bool working;
+
+        std::mutex executingLock;
+        std::condition_variable executingCV;
+        bool executing;
 
         bool initializedAdjacent;
         
@@ -83,9 +90,9 @@ namespace Ariadne
 
         std::string end (std::shared_ptr<T> state)
         {
-            std::lock_guard lock(tasksLock);
-            working = false;
-            taskCV.notify_all();
+            std::lock_guard<std::mutex> gLock(executingLock);
+            executing = false;
+            executingCV.notify_one();
             return "";
         }
 
@@ -119,11 +126,11 @@ namespace Ariadne
                 if (!working)
                     return;
 
-                size_t nextId = nodeIds[next];
                 std::lock_guard gLock(tasksLock);
-                
+                    
                 if (next != "")
                 {
+                    size_t nextId = nodeIds[next];
                     typename std::vector<Incedent>::iterator it;
                     if (adjacent[task.nodeId].size() < 100)
                         it = std::find(adjacent[task.nodeId].begin(), adjacent[task.nodeId].end(), Incedent(nextId, false));
@@ -218,22 +225,41 @@ namespace Ariadne
             generalAddEdge(origin, destination, true);
         }
 
-        void exec (size_t workers)
+        void spawnWorker (size_t workers)
         {
             working = true;
-            pushTask(nodeIds[START], true, true);
-
-            std::vector<std::thread> threads;
-
             for (size_t i = 0; i < workers; ++i)
             {
                 threads.emplace_back(&Pipeline::worker, this);
             }
+        }
 
+        void destroyWorker ()
+        {
+            working = false;
+            taskCV.notify_all();
             for (auto& thread : threads)
             {
                 thread.join();
             }
+            threads.clear();
+        }
+
+        void exec ()
+        {
+            if (!working)
+                throw std::runtime_error("No worker");
+            executing = true;
+            pushTask(nodeIds[START], true, true);
+        }
+
+        void wait ()
+        {
+            std::unique_lock<std::mutex> uLock(executingLock);
+            executingCV.wait(uLock, [&]()
+            {
+                return !executing;
+            });
         }
 
         void print ()

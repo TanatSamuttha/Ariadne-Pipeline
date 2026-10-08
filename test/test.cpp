@@ -58,7 +58,11 @@ void Test2 ()
     pipeline.addEdge("Task6", pipeline.END);
 
     pipeline.print();
-    pipeline.exec(3);
+    
+    pipeline.spawnWorker(3);
+    pipeline.exec();
+    pipeline.wait();
+    pipeline.destroyWorker();
 }
 
 void Test3 ()
@@ -110,7 +114,11 @@ void Test3 ()
     pipeline.addEdge("8", pipeline.END);
 
     pipeline.print();
-    pipeline.exec(3);
+
+    pipeline.spawnWorker(3);
+    pipeline.exec();
+    pipeline.wait();
+    pipeline.destroyWorker();
 }
 
 int main (int argc, char* argv[])
