@@ -139,7 +139,6 @@ namespace Ariadne
                     if (it->edgeType)
                     {
                         pushTask(it->nodeId, true, true);
-                        taskCV.notify_one();
                     }
                     else
                     {
@@ -169,7 +168,7 @@ namespace Ariadne
                 --remainInDegrees[nextId];
                 if (!remainInDegrees[nextId]) tasks.emplace(nextId, active);
             }
-            
+            taskCV.notify_one();
         }
 
         void generalAddEdge (std::string origin, std::string destination, bool edgeType)
@@ -236,7 +235,9 @@ namespace Ariadne
 
         void destroyWorker ()
         {
+            tasksLock.lock();
             working = false;
+            tasksLock.unlock();
             taskCV.notify_all();
             for (auto& thread : threads)
             {

@@ -7,3 +7,6 @@ compiletest:
 
 compilelgbench:
 	g++ $(LANGGRAPHBENCH)/benchmark.cpp -o benchmark -O3 -I$(SRC) -s
+
+compilemultibench:
+	g++ $(BENCH)/multiworkers.cpp -o benchmark -O3 -I$(SRC) -s
