@@ -25,10 +25,10 @@ namespace Ariadne
         struct Incedent
         {
             size_t nodeId;
-            bool edgeType; // 1 = cycle
+            bool isCycle;
 
             Incedent () = default;
-            Incedent (size_t nodeId, bool edgeType) : nodeId(nodeId), edgeType(edgeType) {}
+            Incedent (size_t nodeId, bool isCycle) : nodeId(nodeId), isCycle(isCycle) {}
 
             bool operator== (const Incedent rhs) const
             {
@@ -54,10 +54,10 @@ namespace Ariadne
         {
             size_t nodeId;
             size_t parentId;
-            bool edgeType;
+            bool isCycle;
             
             Printable () = default;
-            Printable (size_t nodeId, size_t parentId, bool edgeType) : nodeId(nodeId), parentId(parentId), edgeType(edgeType) {}
+            Printable (size_t nodeId, size_t parentId, bool isCycle) : nodeId(nodeId), parentId(parentId), isCycle(isCycle) {}
         };
 
         std::vector<std::function<std::string(std::shared_ptr<T>)>> nodes;
@@ -136,7 +136,7 @@ namespace Ariadne
                         it = std::find(adjacent[task.nodeId].begin(), adjacent[task.nodeId].end(), Incedent(nextId, false));
                     else
                         it = std::lower_bound(adjacent[task.nodeId].begin(), adjacent[task.nodeId].end(), Incedent(nextId, false));
-                    if (it->edgeType)
+                    if (it->isCycle)
                     {
                         pushTask(it->nodeId, true, true);
                     }
@@ -144,7 +144,7 @@ namespace Ariadne
                     {
                         for (Incedent nextTask : adjacent[task.nodeId])
                         {
-                            if (!nextTask.edgeType) pushTask(nextTask.nodeId, !(nextTask.nodeId ^ nextId), false);
+                            if (!nextTask.isCycle) pushTask(nextTask.nodeId, !(nextTask.nodeId ^ nextId), false);
                         }
                     }
                 }
@@ -152,7 +152,7 @@ namespace Ariadne
                 {
                     for (Incedent nextTask : adjacent[task.nodeId])
                     {
-                        if (!nextTask.edgeType) pushTask(nextTask.nodeId, true, false);
+                        if (!nextTask.isCycle) pushTask(nextTask.nodeId, true, false);
                     }
                 }
                     
@@ -160,9 +160,9 @@ namespace Ariadne
             }
         }
 
-        void pushTask (size_t nextId, bool active, bool edgeType)
+        void pushTask (size_t nextId, bool active, bool isCycle)
         {
-            if (edgeType) tasks.emplace(nextId, active);
+            if (isCycle) tasks.emplace(nextId, active);
             else
             {
                 --remainInDegrees[nextId];
@@ -171,7 +171,7 @@ namespace Ariadne
             taskCV.notify_one();
         }
 
-        void generalAddEdge (std::string origin, std::string destination, bool edgeType)
+        void generalAddEdge (std::string origin, std::string destination, bool isCycle)
         {
             if (!initializedAdjacent)
             {
@@ -180,8 +180,8 @@ namespace Ariadne
             }
 
             size_t originId = nodeIds[origin], destinationId = nodeIds[destination];
-            adjacent[originId].emplace_back(destinationId, edgeType);
-            if (!edgeType)
+            adjacent[originId].emplace_back(destinationId, isCycle);
+            if (!isCycle)
             {
                 ++inDegrees[destinationId];
                 ++remainInDegrees[destinationId];
@@ -202,6 +202,17 @@ namespace Ariadne
         Pipeline (std::shared_ptr<T> state) : state(state)
         {
             init();
+        }
+
+        Pipeline& operator= (const Pipeline& other)
+        {
+            nodes = other.nodes;
+            nodeIds = other.nodeIds;
+            nodeNames = other.nodeNames;
+            inDegrees = other.inDegrees;
+            remainInDegrees = other.inDegrees;
+            adjacent = other.adjacent;
+            initializedAdjacent = true;
         }
 
         void addNode (std::string name, std::function<std::string(std::shared_ptr<T>)> callable)
@@ -275,7 +286,7 @@ namespace Ariadne
 
                 for (Incedent nextNode : adjacent[node.nodeId])
                 {
-                    if (nextNode.edgeType)
+                    if (nextNode.isCycle)
                     {
                         std::cout << nodeNames[node.nodeId] << " C^ " << nodeNames[nextNode.nodeId] << '\n';
                         continue;
@@ -284,7 +295,7 @@ namespace Ariadne
                     --remainInDegrees[nextNode.nodeId];
                     if (!remainInDegrees[nextNode.nodeId])
                     {
-                        printQueue.emplace(nextNode.nodeId, node.nodeId, nextNode.edgeType);
+                        printQueue.emplace(nextNode.nodeId, node.nodeId, nextNode.isCycle);
                     }
                 }
             }
