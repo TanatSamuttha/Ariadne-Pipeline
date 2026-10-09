@@ -1,4 +1,4 @@
-#include "pipeline.hpp"
+#include "ariadne.hpp"
 
 template<typename T>
 std::string foo1 (std::shared_ptr<T> state)

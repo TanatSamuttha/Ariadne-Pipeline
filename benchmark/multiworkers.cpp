@@ -1,4 +1,4 @@
-#include "pipeline.hpp"
+#include "ariadne.hpp"
 
 struct State
 {
@@ -90,88 +90,88 @@ int main ()
     auto stateParallel = std::make_shared<State>();
     double timeParallel;
     {
-        Ariadne::Pipeline<State> pipeline(stateParallel);
+        Ariadne::Graph<State> graph(stateParallel);
         
-        pipeline.addNode("push0", push0);
-        pipeline.addNode("push1", push1);
-        pipeline.addNode("push2", push2);
-        pipeline.addNode("push3", push3);
-        pipeline.addNode("push4", push4);
-        pipeline.addNode("push5", push5);
+        graph.addNode("push0", push0);
+        graph.addNode("push1", push1);
+        graph.addNode("push2", push2);
+        graph.addNode("push3", push3);
+        graph.addNode("push4", push4);
+        graph.addNode("push5", push5);
         
-        pipeline.addEdge(pipeline.START, "push0");
-        pipeline.addEdge(pipeline.START, "push1");
-        pipeline.addEdge(pipeline.START, "push2");
-        pipeline.addEdge(pipeline.START, "push3");
-        pipeline.addEdge(pipeline.START, "push4");
-        pipeline.addEdge(pipeline.START, "push5");
-        pipeline.addEdge("push0", pipeline.END);
-        pipeline.addEdge("push1", pipeline.END);
-        pipeline.addEdge("push2", pipeline.END);
-        pipeline.addEdge("push3", pipeline.END);
-        pipeline.addEdge("push4", pipeline.END);
-        pipeline.addEdge("push5", pipeline.END);
+        graph.addEdge(graph.START, "push0");
+        graph.addEdge(graph.START, "push1");
+        graph.addEdge(graph.START, "push2");
+        graph.addEdge(graph.START, "push3");
+        graph.addEdge(graph.START, "push4");
+        graph.addEdge(graph.START, "push5");
+        graph.addEdge("push0", graph.END);
+        graph.addEdge("push1", graph.END);
+        graph.addEdge("push2", graph.END);
+        graph.addEdge("push3", graph.END);
+        graph.addEdge("push4", graph.END);
+        graph.addEdge("push5", graph.END);
 
-        pipeline.spawnWorker(6);
+        graph.spawnWorker(6);
         auto start = std::chrono::steady_clock::now();
 
-        pipeline.exec();
-        pipeline.wait();
+        graph.exec();
+        graph.wait();
         
         auto end = std::chrono::steady_clock::now();
-        pipeline.destroyWorker();
+        graph.destroyWorker();
         timeParallel = std::chrono::duration<double>(end - start).count();
     }
 
     auto stateSequential = std::make_shared<State>();
     double timeSequential;
     {
-        Ariadne::Pipeline<State> pipeline(stateSequential);
+        Ariadne::Graph<State> graph(stateSequential);
 
-        pipeline.addNode("pushAll", pushAll);
+        graph.addNode("pushAll", pushAll);
 
-        pipeline.addEdge(pipeline.START, "pushAll");
-        pipeline.addEdge("pushAll", pipeline.END);
+        graph.addEdge(graph.START, "pushAll");
+        graph.addEdge("pushAll", graph.END);
 
-        pipeline.spawnWorker(1);
+        graph.spawnWorker(1);
         auto start = std::chrono::steady_clock::now();
 
-        pipeline.exec();
-        pipeline.wait();
+        graph.exec();
+        graph.wait();
         
         auto end = std::chrono::steady_clock::now();
-        pipeline.destroyWorker();
+        graph.destroyWorker();
         timeSequential = std::chrono::duration<double>(end - start).count();
     }
 
     auto stateChainSequential = std::make_shared<State>();
     double timeChainSequential;
     {
-        Ariadne::Pipeline<State> pipeline(stateChainSequential);
+        Ariadne::Graph<State> graph(stateChainSequential);
         
-        pipeline.addNode("push0", push0);
-        pipeline.addNode("push1", push1);
-        pipeline.addNode("push2", push2);
-        pipeline.addNode("push3", push3);
-        pipeline.addNode("push4", push4);
-        pipeline.addNode("push5", push5);
+        graph.addNode("push0", push0);
+        graph.addNode("push1", push1);
+        graph.addNode("push2", push2);
+        graph.addNode("push3", push3);
+        graph.addNode("push4", push4);
+        graph.addNode("push5", push5);
         
-        pipeline.addEdge(pipeline.START, "push0");
-        pipeline.addEdge("push0", "push1");
-        pipeline.addEdge("push1", "push2");
-        pipeline.addEdge("push2", "push3");
-        pipeline.addEdge("push3", "push4");
-        pipeline.addEdge("push4", "push5");
-        pipeline.addEdge("push5", pipeline.END);
+        graph.addEdge(graph.START, "push0");
+        graph.addEdge("push0", "push1");
+        graph.addEdge("push1", "push2");
+        graph.addEdge("push2", "push3");
+        graph.addEdge("push3", "push4");
+        graph.addEdge("push4", "push5");
+        graph.addEdge("push5", graph.END);
 
-        pipeline.spawnWorker(1);
+        graph.spawnWorker(1);
         auto start = std::chrono::steady_clock::now();
 
-        pipeline.exec();
-        pipeline.wait();
+        graph.exec();
+        graph.wait();
         
         auto end = std::chrono::steady_clock::now();
-        pipeline.destroyWorker();
+        graph.destroyWorker();
         timeChainSequential = std::chrono::duration<double>(end - start).count();
     }
 
@@ -196,7 +196,7 @@ int main ()
         }
     }
 
-    std::cout << "Pipeline nodes:                          " << stateParallel->n << '\n';
+    std::cout << "graph nodes:                          " << stateParallel->n << '\n';
     std::cout << "Time parallel:                           " << timeParallel << '\n';
     std::cout << "Time sequential:                         " << timeSequential << '\n';
     std::cout << "Time chain sequential:                   " << timeChainSequential << '\n';

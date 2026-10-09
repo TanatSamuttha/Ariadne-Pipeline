@@ -1,4 +1,4 @@
-#include "pipeline.hpp"
+#include "ariadne.hpp"
 #include <chrono>
 
 struct State
@@ -18,28 +18,28 @@ int main ()
     int n = 25;
 
     auto state = std::make_shared<State>();
-    Ariadne::Pipeline<State> pipeline(state);
+    Ariadne::Graph<State> graph(state);
 
     for (int i = 1; i <= n; ++i)
     {
-        pipeline.addNode(std::to_string(i), addList);
+        graph.addNode(std::to_string(i), addList);
     }
 
-    pipeline.addEdge(pipeline.START, "1");
+    graph.addEdge(graph.START, "1");
     for (int i = 2; i <= n; ++i)
     {
-        pipeline.addEdge(std::to_string(i - 1), std::to_string(i));
+        graph.addEdge(std::to_string(i - 1), std::to_string(i));
     }
-    pipeline.addEdge(std::to_string(n), pipeline.END);
+    graph.addEdge(std::to_string(n), graph.END);
     
-    pipeline.spawnWorker(1);
+    graph.spawnWorker(1);
     
     auto start = std::chrono::steady_clock::now();
-    pipeline.exec();
-    pipeline.wait();
+    graph.exec();
+    graph.wait();
     auto end = std::chrono::steady_clock::now();
 
-    pipeline.destroyWorker();
+    graph.destroyWorker();
 
     for (int i = 1; i <= n; ++i)
     {
@@ -50,7 +50,7 @@ int main ()
         }
     }
     
-    std::cout << "Pipeline nodes: " << n << '\n';
+    std::cout << "graph nodes: " << n << '\n';
     std::cout << "Time:           " << std::chrono::duration<double>(end - start).count();
 
     return 0;

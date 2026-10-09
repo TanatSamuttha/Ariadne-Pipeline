@@ -19,7 +19,7 @@ namespace Ariadne
     struct NoState {};
 
     template<typename T>
-    class Pipeline
+    class Graph
     {
     private:
         struct Incedent
@@ -98,8 +98,8 @@ namespace Ariadne
 
         void init ()
         {
-            addNode(END, std::bind(&Pipeline::end, this, std::placeholders::_1));
-            addNode(START, std::bind(&Pipeline::start, this, std::placeholders::_1));
+            addNode(END, std::bind(&Graph::end, this, std::placeholders::_1));
+            addNode(START, std::bind(&Graph::start, this, std::placeholders::_1));
         }
 
         void worker ()
@@ -194,17 +194,17 @@ namespace Ariadne
         static constexpr std::string START = "Start";
         static constexpr std::string END = "End";
 
-        Pipeline () : state(nullptr)
+        Graph () : state(nullptr)
         {
             init();
         }
 
-        Pipeline (std::shared_ptr<T> state) : state(state)
+        Graph (std::shared_ptr<T> state) : state(state)
         {
             init();
         }
 
-        Pipeline (const Pipeline& other)
+        Graph (const Graph& other)
         {
             nodes = other.nodes;
             nodeIds = other.nodeIds;
@@ -215,7 +215,7 @@ namespace Ariadne
             initializedAdjacent = true;
         }
 
-        Pipeline& operator= (const Pipeline& other)
+        Graph& operator= (const Graph& other)
         {
             nodes = other.nodes;
             nodeIds = other.nodeIds;
@@ -253,7 +253,7 @@ namespace Ariadne
             working = true;
             for (size_t i = 0; i < workers; ++i)
             {
-                threads.emplace_back(&Pipeline::worker, this);
+                threads.emplace_back(&Graph::worker, this);
             }
         }
 

@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "pipeline.hpp"
+#include "ariadne.hpp"
 #include "foo.hpp"
 
 struct State
@@ -10,59 +10,59 @@ struct State
 
 void Test1 ()
 {
-    Ariadne::Pipeline<Ariadne::NoState> pipeline;
+    Ariadne::Graph<Ariadne::NoState> graph;
 
     std::function<std::string(std::shared_ptr<Ariadne::NoState>)> dummy = [](std::shared_ptr<Ariadne::NoState>) -> std::string
     {
         return "";
     };
 
-    pipeline.addNode("Task1", dummy);
-    pipeline.addNode("Task2", dummy);
-    pipeline.addNode("Task3", dummy);
-    pipeline.addNode("Task4", dummy);
+    graph.addNode("Task1", dummy);
+    graph.addNode("Task2", dummy);
+    graph.addNode("Task3", dummy);
+    graph.addNode("Task4", dummy);
 
     
-    pipeline.addEdge(pipeline.START, "Task1");
-    pipeline.addEdge("Task1", "Task2");
-    pipeline.addEdge("Task2", "Task3");
-    pipeline.addEdge("Task2", "Task4");
-    pipeline.addEdge("Task4", pipeline.END);
+    graph.addEdge(graph.START, "Task1");
+    graph.addEdge("Task1", "Task2");
+    graph.addEdge("Task2", "Task3");
+    graph.addEdge("Task2", "Task4");
+    graph.addEdge("Task4", graph.END);
     std::cout << "Edge\n";
 
-    pipeline.print();
+    graph.print();
 }
 
 void Test2 ()
 {
-    Ariadne::Pipeline<Ariadne::NoState> pipeline;
+    Ariadne::Graph<Ariadne::NoState> graph;
 
-    pipeline.addNode("Task1", foo1<Ariadne::NoState>);
-    pipeline.addNode("Task2", foo2<Ariadne::NoState>);
-    pipeline.addNode("Task3", foo3<Ariadne::NoState>);
-    pipeline.addNode("Task4", foo4<Ariadne::NoState>);
-    pipeline.addNode("Task5", foo5<Ariadne::NoState>);
-    pipeline.addNode("Task6", foo6<Ariadne::NoState>);
-    pipeline.addNode("Task7", foo7<Ariadne::NoState>);
-    pipeline.addNode("Task8", foo8<Ariadne::NoState>);
-    pipeline.addNode("Task9", foo9<Ariadne::NoState>);
+    graph.addNode("Task1", foo1<Ariadne::NoState>);
+    graph.addNode("Task2", foo2<Ariadne::NoState>);
+    graph.addNode("Task3", foo3<Ariadne::NoState>);
+    graph.addNode("Task4", foo4<Ariadne::NoState>);
+    graph.addNode("Task5", foo5<Ariadne::NoState>);
+    graph.addNode("Task6", foo6<Ariadne::NoState>);
+    graph.addNode("Task7", foo7<Ariadne::NoState>);
+    graph.addNode("Task8", foo8<Ariadne::NoState>);
+    graph.addNode("Task9", foo9<Ariadne::NoState>);
 
-    pipeline.addEdge(pipeline.START, "Task1");
-    pipeline.addEdge(pipeline.START, "Task2");
-    pipeline.addEdge("Task1", "Task4");
-    pipeline.addEdge("Task4", "Task6");
-    pipeline.addEdge("Task1", "Task3");
-    pipeline.addEdge("Task2", "Task5");
-    pipeline.addEdge("Task5", "Task6");
-    pipeline.addEdge("Task3", pipeline.END);
-    pipeline.addEdge("Task6", pipeline.END);
+    graph.addEdge(graph.START, "Task1");
+    graph.addEdge(graph.START, "Task2");
+    graph.addEdge("Task1", "Task4");
+    graph.addEdge("Task4", "Task6");
+    graph.addEdge("Task1", "Task3");
+    graph.addEdge("Task2", "Task5");
+    graph.addEdge("Task5", "Task6");
+    graph.addEdge("Task3", graph.END);
+    graph.addEdge("Task6", graph.END);
 
-    pipeline.print();
+    graph.print();
     
-    pipeline.spawnWorker(3);
-    pipeline.exec();
-    pipeline.wait();
-    pipeline.destroyWorker();
+    graph.spawnWorker(3);
+    graph.exec();
+    graph.wait();
+    graph.destroyWorker();
 }
 
 void Test3 ()
@@ -87,38 +87,38 @@ void Test3 ()
 
     State state;
     
-    Ariadne::Pipeline<State> pipeline(std::make_shared<State>(state));
+    Ariadne::Graph<State> graph(std::make_shared<State>(state));
 
-    pipeline.addNode("1", foo1<State>);
-    pipeline.addNode("2", foo2<State>);
-    pipeline.addNode("3", foo3<State>);
-    pipeline.addNode("4", foo4<State>);
-    pipeline.addNode("5", con5);
-    pipeline.addNode("6", foo6<State>);
-    pipeline.addNode("7", foo7<State>);
-    pipeline.addNode("8", foo8<State>);
-    pipeline.addNode("sum", sum);
+    graph.addNode("1", foo1<State>);
+    graph.addNode("2", foo2<State>);
+    graph.addNode("3", foo3<State>);
+    graph.addNode("4", foo4<State>);
+    graph.addNode("5", con5);
+    graph.addNode("6", foo6<State>);
+    graph.addNode("7", foo7<State>);
+    graph.addNode("8", foo8<State>);
+    graph.addNode("sum", sum);
 
-    pipeline.addEdge(pipeline.START, "1");
-    pipeline.addEdge(pipeline.START, "2");
-    pipeline.addEdge("1", "sum");
-    pipeline.addEdge("2", "3");
-    pipeline.addEdge("sum", "6");
-    pipeline.addEdge("sum", "5");
-    pipeline.addCycleEdge("sum", "1");
-    pipeline.addEdge("3", "6");
-    pipeline.addEdge("5", "7");
-    pipeline.addEdge("5", "8");
-    pipeline.addEdge("6", pipeline.END);
-    pipeline.addEdge("7", pipeline.END);
-    pipeline.addEdge("8", pipeline.END);
+    graph.addEdge(graph.START, "1");
+    graph.addEdge(graph.START, "2");
+    graph.addEdge("1", "sum");
+    graph.addEdge("2", "3");
+    graph.addEdge("sum", "6");
+    graph.addEdge("sum", "5");
+    graph.addCycleEdge("sum", "1");
+    graph.addEdge("3", "6");
+    graph.addEdge("5", "7");
+    graph.addEdge("5", "8");
+    graph.addEdge("6", graph.END);
+    graph.addEdge("7", graph.END);
+    graph.addEdge("8", graph.END);
 
-    pipeline.print();
+    graph.print();
 
-    pipeline.spawnWorker(3);
-    pipeline.exec();
-    pipeline.wait();
-    pipeline.destroyWorker();
+    graph.spawnWorker(3);
+    graph.exec();
+    graph.wait();
+    graph.destroyWorker();
 }
 
 int main (int argc, char* argv[])
