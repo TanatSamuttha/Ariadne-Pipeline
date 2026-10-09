@@ -44,10 +44,9 @@ namespace Ariadne
         struct Task
         {
             size_t nodeId;
-            bool active;
             
             Task () = default;
-            Task (size_t nodeId, bool active) : nodeId(nodeId), active(active) {}
+            Task (size_t nodeId) : nodeId(nodeId) {}
         };
         
         struct Printable
@@ -63,6 +62,9 @@ namespace Ariadne
         std::vector<std::function<std::string(std::shared_ptr<T>)>> nodes;
         std::map<std::string, size_t> nodeIds;
         std::vector<std::string> nodeNames;
+
+        std::vector<uint64_t> isActive;
+        std::mutex activeLock;
 
         std::vector<size_t> inDegrees;
         std::vector<size_t> remainInDegrees;
@@ -82,6 +84,22 @@ namespace Ariadne
         bool executing;
 
         bool initializedAdjacent;
+
+        void setActive (size_t idx, bool value)
+        {
+            uint64_t mask = 1ull << (idx % 64);
+
+            std::lock_guard<std::mutex> gLock(activeLock);
+            if (value) isActive[idx / 64] |= mask;
+            else       isActive[idx / 64] &= ~mask;
+        }
+
+        bool readActive (size_t idx)
+        {
+            uint64_t mask = 1ull << (idx % 64);
+            std::lock_guard<std::mutex> gLock(activeLock);
+            return (isActive[idx / 64] & mask) != 0;
+        }
         
         std::string start (std::shared_ptr<T> state)
         {
@@ -121,12 +139,13 @@ namespace Ariadne
                 uLock.unlock();
 
                 std::string next = "";
-                if(task.active) next = nodes[task.nodeId](state);
+
+                if (readActive(task.nodeId)) next = nodes[task.nodeId](state);
                 
                 if (!working)
                     return;
 
-                std::lock_guard gLock(tasksLock);
+                std::lock_guard gTaskLock(tasksLock);
                     
                 if (next != "")
                 {
@@ -152,21 +171,30 @@ namespace Ariadne
                 {
                     for (Incedent nextTask : adjacent[task.nodeId])
                     {
-                        if (!nextTask.isCycle) pushTask(nextTask.nodeId, true, false);
+                        if (!nextTask.isCycle) pushTask(nextTask.nodeId, readActive(task.nodeId), false);
                     }
                 }
-                    
+
                 remainInDegrees[task.nodeId] = inDegrees[task.nodeId];
+                setActive(task.nodeId, false);
             }
         }
 
         void pushTask (size_t nextId, bool active, bool isCycle)
         {
-            if (isCycle) tasks.emplace(nextId, active);
+            if (isCycle)
+            { 
+                tasks.emplace(nextId);
+                setActive(nextId, active);
+            }
             else
             {
                 --remainInDegrees[nextId];
-                if (!remainInDegrees[nextId]) tasks.emplace(nextId, active);
+                if (!readActive(nextId))
+                    setActive(nextId, active);
+
+                if (!remainInDegrees[nextId])
+                    tasks.emplace(nextId);
             }
             taskCV.notify_one();
         }
@@ -176,6 +204,7 @@ namespace Ariadne
             if (!initializedAdjacent)
             {
                 adjacent = std::vector<std::vector<Incedent>> (nodes.size());
+                isActive.assign(nodes.size() / 64 + (nodes.size() % 64 != 0), 0);
                 initializedAdjacent = true;
             }
 
